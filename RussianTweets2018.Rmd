@@ -1,0 +1,147 @@
+---
+title: "Russian Tweets - October 2018 Data"
+output: html_notebook
+---
+
+Load libraries
+
+```{r}
+devtools::install_github("tidyverse/dplyr")
+devtools::install_github("tidyverse/rlang")
+
+library(rlang)
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+library(stringr)
+install.packages("tidytext")
+library(tidytext)
+library(ggthemes)#Themes for formating
+library(grid) #Add grid line
+library(cowplot) #Add annotation
+
+install.packages(c("tm", "SnowballC", "wordcloud", "RColorBrewer", "RCurl", "XML"))
+library(tm)
+library(SnowballC)
+library(wordcloud)
+library(RColorBrewer)
+library(RCurl)
+library(XML)
+
+install.packages("wordcloud2")
+library(wordcloud2)
+```
+
+First look at tweets from 418 Russian accounts released by Twitter in January 2019.
+
+```{r}
+# read data
+russia_users <- read.csv("russia_201901_1_users_csv_hashed.csv", encoding = "UTF-8")
+russia_tweets <- read_csv("russian_201901_1_tweets_csv_hashed.csv")
+```
+
+Trend over time - filtering out the few tweets from before 2015
+```{r}
+# trend over time
+tweets <- russia_tweets %>%
+  mutate(tweet_date=date(tweet_time)) %>%
+  filter(tweet_date > ymd("2014-12-31"))
+
+ggplot(data = tweets, mapping = aes(tweet_date)) + geom_area(stat = "bin",  fill = "#00AFBB", color = "black", binwidth=7) + 
+  labs(title="Russian Tweets per Week", subtitle = "Data Released January 2019", x = "Tweet Date", y= "tweets per week")
+```
+
+```{r}
+# likes and retweets
+tweets %>%
+  group_by(is_retweet) %>%
+  summarize(n=n()) %>%
+  mutate(prop = n/sum(n))
+```
+
+
+```{r}
+
+```
+
+ 
+
+
+```{r}
+# most common hashtags
+hashtag_summary <- russia_tweets %>%
+  select(hashtags, userid, user_display_name, account_language) %>%
+  filter(hashtags != "[]", account_language == "en")  %>% # get rid of tweets with no hashtags
+  mutate(hashtags = str_sub(hashtags,2,str_length(hashtags)-1)) %>% # remove first and last characters (brackets)
+  mutate(hashtags = str_split(hashtags,",")) # separate multiple hashtags into a list
+
+hashtag_list <- unnest(hashtag_summary, hashtags) # restructure so that there is 1 hashtag per record
+
+hashtag_freq <- hashtag_list %>%
+  group_by(hashtags) %>%
+  summarize(n=n()) %>%
+  filter(n >= 200) %>%
+  rename(word = hashtags, freq = n)
+
+# word clouds
+
+wordcloud2(data=hashtag_freq)
+
+```
+
+Read original tweet archive from October 2018
+
+```{r}
+
+IRA_users <- read.csv("ira_users_csv_hashed.csv", encoding = "UTF-8")
+IRA_tweets <- read_csv("ira_tweets_csv_hashed.csv")
+```
+
+
+```{r}
+# trend over time
+IRA_tweets <- IRA_tweets %>%
+  mutate(tweet_date=date(tweet_time)) %>%
+  filter(tweet_date > ymd("2014-12-31"))
+
+ggplot(data = IRA_tweets, mapping = aes(tweet_date)) + geom_area(stat = "bin",  fill = "#00AFBB", color = "black", binwidth=7) + 
+  labs(title="Russian Tweets per Week", subtitle = "Data Released October 2018", x = "Tweet Date", y= "tweets per week")
+```
+
+```{r}
+# likes and retweets
+IRA_tweets %>%
+  group_by(is_retweet) %>%
+  summarize(n=n()) %>%
+  mutate(prop = n/sum(n))
+```
+
+```{r}
+# most common hashtags
+hashtag_summary0 <- IRA_tweets %>%
+  select(hashtags, userid, user_display_name, account_language) %>%
+  filter(hashtags != "[]", account_language == "en")  %>% # get rid of tweets with no hashtags
+  mutate(hashtags = str_sub(hashtags,2,str_length(hashtags)-1)) %>% # remove first and last characters (brackets)
+  mutate(hashtags = str_split(hashtags,",")) # separate multiple hashtags into a list
+
+hashtag_list0 <- unnest(hashtag_summary0, hashtags) # restructure so that there is 1 hashtag per record
+
+hashtag_freq0 <- hashtag_list0 %>%
+  group_by(hashtags) %>%
+  summarize(n=n()) %>%
+  filter(n >= 200) %>%
+  rename(word = hashtags, freq = n)
+
+# word clouds
+
+wordcloud2(data=hashtag_freq0)
+```
+eliminate most common words
+```{r}
+hashtag_freq0 <- hashtag_freq0 %>%
+  filter(freq < 4000)
+wordcloud2(data=hashtag_freq0)
+
+
+```
+
